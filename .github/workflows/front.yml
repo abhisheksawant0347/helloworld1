@@ -1,0 +1,36 @@
+name: FrontEnd App deloyment
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2 
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - run: npm install yarn -g
+      - name: Build the application
+        run: | 
+          yarn run build  
+      - name: connect and deploy
+        env:
+            PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+            HOSTNAME: ${{secrets.SSH_HOST}}
+            USER_NAME: ${{secrets.USER_NAME}}
+			
+      - run: |
+          scp -i "$PRIVATE_KEY" -r /frontend/dist ${USER_NAME}@${HOSTNAME}:/var/www/  
+       
+      - name: Connect to server and restart nginx
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} 
+            sudo systemctl restart nginx
